@@ -1,30 +1,57 @@
-import { Entity, Column, ManyToOne, OneToMany } from "typeorm";
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  Index,
+  JoinColumn,
+} from "typeorm";
 import { BaseEntity } from "./base.entity";
 import { Post } from "./post.entity";
 import { User } from "./user.entity";
-import { SubMessage } from "./submessage.entity";
 import { MessageLike } from "./messageLike.entity";
 
 @Entity()
 export class Message extends BaseEntity {
-  @ManyToOne(() => Post, (post) => post.messages, { onDelete: "CASCADE" })
-  post: Post;
+  @Index()
+  @Column()
+  postId!: string;
 
+  @JoinColumn({ name: "postId" })
+  @ManyToOne(() => Post, (post) => post.messages, { onDelete: "CASCADE" })
+  post!: Post;
+
+  @Index()
+  @Column()
+  userId!: string;
+
+  @JoinColumn({ name: "userId" })
   @ManyToOne(() => User, (user) => user.messages, { onDelete: "CASCADE" })
-  user: User;
+  user!: User;
 
   @Column()
-  text: string;
+  text!: string;
+
+  @Index()
+  @Column()
+  parentId!: string | null;
+
+  @JoinColumn({ name: "parentId" })
+  @ManyToOne(() => Message, (message) => message.submessages, {
+    onDelete: "CASCADE",
+    nullable: true,
+  })
+  parent!: Message | null;
 
   @Column({ default: 0 })
-  likesCount: number;
+  likesCount!: number;
 
   @Column({ default: 0 })
-  submessagesCount: number;
+  submessagesCount!: number;
 
-  @OneToMany(() => SubMessage, (submessage) => submessage.message)
-  submessages: SubMessage[];
+  @OneToMany(() => Message, (message) => message.parent)
+  submessages!: Message[];
 
   @OneToMany(() => MessageLike, (like) => like.message)
-  likes: MessageLike[];
+  likes!: MessageLike[];
 }

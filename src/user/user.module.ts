@@ -6,16 +6,15 @@ import { UserController } from "./user.controller";
 import { UploaderModule } from "src/uploader/uploader.module";
 import { PostModule } from "src/post/post.module";
 import { FollowerModule } from "src/follower/follower.module";
-import { UserDataModule } from "src/userData/userData.module";
+import { ProfileModule } from "src/profile/profile.module";
 
 @Module({
   imports: [
     UploaderModule,
     PostModule,
     FollowerModule,
+    ProfileModule,
     TypeOrmModule.forFeature([User]),
-    UserDataModule,
-    FollowerModule,
   ],
   providers: [UserService],
   controllers: [UserController],

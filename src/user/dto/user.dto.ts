@@ -11,19 +11,19 @@ import { User } from "src/entity/user.entity";
 export class UserDTO implements Readonly<UserDTO> {
   @IsUUID()
   @IsOptional()
-  id: string;
+  id!: string;
 
   @ApiProperty({ required: true })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ required: true })
   @IsStrongPassword()
-  password: string;
+  password!: string;
 
   @ApiProperty({ required: true })
   @IsString()
-  nickname: string;
+  nickname!: string;
 
   public static from(dto: Partial<UserDTO>) {
     const it = new UserDTO();
@@ -42,8 +42,9 @@ export class UserDTO implements Readonly<UserDTO> {
     const it = new User();
     it.id = this.id;
     it.nickname = this.nickname;
-    it.lastChangedDateTime = new Date();
-    it.createDateTime = new Date();
+    const date = new Date();
+    it.createdAt = date;
+    it.updatedAt = date;
     return it;
   }
 }

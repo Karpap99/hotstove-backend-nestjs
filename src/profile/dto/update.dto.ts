@@ -3,20 +3,20 @@ import { User } from "src/entity/user.entity";
 
 export class UpdateDTO implements Readonly<UpdateDTO> {
   @ApiProperty({ required: false })
-  file: {
+  file!: {
     uri: string;
     fileName: string;
     type: string;
   };
 
   @ApiProperty({ required: false })
-  age: string;
+  age!: string;
 
   @ApiProperty({ required: false, default: "" })
-  description: string;
+  description!: string;
 
   @ApiProperty({ required: false, default: true })
-  isPublic: string;
+  isPublic!: string;
 
   public static from(dto: Partial<UpdateDTO>) {
     const it = new UpdateDTO();
@@ -26,8 +26,8 @@ export class UpdateDTO implements Readonly<UpdateDTO> {
 
   public toEntity() {
     const it = new User();
-    it.lastChangedDateTime = new Date();
-    it.createDateTime = new Date();
+    it.updatedAt = new Date();
+    it.createdAt = new Date();
     return it;
   }
 }

@@ -8,30 +8,32 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "src/entity/user.entity";
 import { Repository } from "typeorm";
 import { UploaderService } from "src/uploader/uploader.service";
-import { UserData } from "src/entity/userData.entity";
+import { Profile } from "../entity/profile.entity";
 import { UpdateDTO } from "./dto/update.dto";
 import { BIG_AVATAR } from "src/constants";
 
 @Injectable()
-export class UserDataService {
+export class ProfileService {
   constructor(
-    @InjectRepository(UserData) private readonly data: Repository<UserData>,
+    @InjectRepository(Profile) private readonly profiles: Repository<Profile>,
     @InjectRepository(User) private readonly users: Repository<User>,
     @Inject(forwardRef(() => UploaderService))
     private uploader: UploaderService,
   ) {}
 
   async getUserDataById(uuid: string) {
-    const userdata = await this.data.findOne({ where: { user: { id: uuid } } });
-    if (!userdata) throw new BadRequestException("No user");
-    userdata.profile_picture = BIG_AVATAR.replace(
+    const profile = await this.profiles.findOne({
+      where: { userId: uuid },
+    });
+    if (!profile) throw new BadRequestException("No user");
+    profile.profile_picture = BIG_AVATAR.replace(
       "default",
-      userdata.profile_picture,
+      profile.profile_picture,
     );
-    return { result: userdata };
+    return { result: profile };
   }
 
-  public async UpdateUser(
+  public async Update(
     uuid: string,
     update: UpdateDTO,
     file?: Express.Multer.File,
@@ -39,14 +41,14 @@ export class UserDataService {
     const u = await this.users.findOne({ where: { id: uuid } });
     if (!u) return { result: "user doesn't exist" };
 
-    let userData = await this.data.findOne({
-      where: { user: { id: uuid } },
+    let profile = await this.profiles.findOne({
+      where: { userId: u.id },
       relations: ["user"],
     });
 
-    if (!userData) {
-      userData = new UserData();
-      userData.user = u;
+    if (!profile) {
+      profile = new Profile();
+      profile.user = u;
     }
 
     if (file) {
@@ -54,15 +56,15 @@ export class UserDataService {
         file,
         isPublic: true,
       });
-      userData.profile_picture = pfp.url;
+      profile.profile_picture = pfp.url;
     }
 
     if (update.age) {
-      userData.age = new Date(update.age);
+      profile.age = new Date(update.age);
     }
-    userData.description = update.description;
+    profile.description = update.description;
 
-    const result = await this.data.save(userData);
+    const result = await this.profiles.save(profile);
     result.profile_picture = BIG_AVATAR.replace(
       "default",
       result.profile_picture,

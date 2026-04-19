@@ -25,7 +25,7 @@ export class UserController {
   @UseGuards(AuthGuard("jwt"))
   @Get("/get_one")
   public async getOneById(@Req() req: Request) {
-    return await this.serv.getUserById(req.user!.uuid);
+    return await this.serv.getUserById(req.user?.uuid);
   }
 
   @UseGuards(AuthGuard("jwt"))
@@ -34,18 +34,18 @@ export class UserController {
     @Req() req: Request,
     @Query("UserId") UserId: string,
   ) {
-    return await this.serv.getUserWithDataById(req.user!.uuid, UserId);
+    return await this.serv.getUserWithDataById(req.user?.uuid, UserId);
   }
 
   @UseGuards(AuthGuard("jwt"))
   @Delete("/")
   public async deleteOneById(@Req() req: Request) {
-    return await this.serv.DeleteUser(req.user!.uuid);
+    return await this.serv.Delete(req.user?.uuid);
   }
 
   @UseGuards(AuthGuard("jwt"))
   @Post()
   public async PostOne(@Body() user: UserDTO) {
-    return await this.serv.CreateUser(user);
+    return await this.serv.Create(user);
   }
 }

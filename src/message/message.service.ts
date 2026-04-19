@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Message } from "src/entity/message.entity";
-import { User } from "src/entity/user.entity";
 import { Repository } from "typeorm";
 import { Post } from "src/entity/post.entity";
 import { MessageLikeService } from "src/message-like/message-like.service";
@@ -11,7 +10,6 @@ import { SMALL_AVATAR } from "src/constants";
 export class MessageService {
   constructor(
     @InjectRepository(Message) private readonly repo: Repository<Message>,
-    @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(Post) private readonly posts: Repository<Post>,
     private likeService: MessageLikeService,
   ) {}
@@ -39,7 +37,7 @@ export class MessageService {
         nickname: newMsg.user.nickname,
         profile_picture: SMALL_AVATAR.replace(
           "default",
-          newMsg.user.user_data.profile_picture,
+          newMsg.user.profile.profile_picture,
         ),
       },
       isLiked: false,
@@ -60,22 +58,20 @@ export class MessageService {
     );
     const likedMessageIds = new Set(userLikes.map((like) => like.message.id));
 
-    const formated = await Promise.all(
-      messages.map((message) => {
-        return {
-          ...message,
-          user: {
-            id: message.user.id,
-            nickname: message.user.nickname,
-            profile_picture: SMALL_AVATAR.replace(
-              "default",
-              message.user.user_data.profile_picture,
-            ),
-          },
-          isLiked: likedMessageIds.has(message.id),
-        };
-      }),
-    );
+    const formated = messages.map((message) => {
+      return {
+        ...message,
+        user: {
+          id: message.user.id,
+          nickname: message.user.nickname,
+          profile_picture: SMALL_AVATAR.replace(
+            "default",
+            message.user.profile.profile_picture,
+          ),
+        },
+        isLiked: likedMessageIds.has(message.id),
+      };
+    });
     return formated;
   }
 

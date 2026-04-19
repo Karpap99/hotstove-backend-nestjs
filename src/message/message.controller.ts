@@ -23,7 +23,7 @@ export class MessageController {
     @Req() req: Request,
     @Body("data") data: { postId: string; text: string },
   ) {
-    return await this.serv.sendMessage(req.user!.uuid, data);
+    return await this.serv.sendMessage(req.user?.uuid, data);
   }
 
   @UseGuards(AuthGuard("jwt"))
@@ -32,7 +32,7 @@ export class MessageController {
     @Req() req: Request,
     @Query("postId") postId: string,
   ) {
-    return await this.serv.getAllByPost(req.user!.uuid, postId);
+    return await this.serv.getAllByPost(req.user?.uuid, postId);
   }
 
   @UseGuards(AuthGuard("jwt"))
@@ -41,7 +41,7 @@ export class MessageController {
     @Req() req: Request,
     @Body("data") data: { messageId: string; text: string },
   ) {
-    return await this.serv.UpdateMessage(req.user!.uuid, data);
+    return await this.serv.UpdateMessage(req.user?.uuid, data);
   }
 
   @UseGuards(AuthGuard("jwt"))
@@ -50,6 +50,6 @@ export class MessageController {
     @Req() req: Request,
     @Query("messageId") messageId: string,
   ) {
-    return await this.serv.Delete(req.user!.uuid, messageId);
+    return await this.serv.Delete(req.user?.uuid, messageId);
   }
 }

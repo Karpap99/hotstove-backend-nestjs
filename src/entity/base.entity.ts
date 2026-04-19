@@ -7,11 +7,11 @@ import {
 
 export abstract class BaseEntity {
   @PrimaryGeneratedColumn("uuid")
-  id: string;
+  id!: string;
 
-  @CreateDateColumn({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
-  createDateTime: Date;
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
 
-  @UpdateDateColumn({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
-  lastChangedDateTime: Date;
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
 }

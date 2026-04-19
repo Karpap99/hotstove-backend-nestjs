@@ -1,9 +1,9 @@
-declare module "express" {
+import { TokenDto } from "../auth/dto/token.dto";
+
+declare module "express-serve-static-core" {
   interface Request {
-    user?: {
-      uuid: string;
-      email: string;
-      nickname: string;
-    };
+    user: TokenDto;
   }
 }
+
+export {};

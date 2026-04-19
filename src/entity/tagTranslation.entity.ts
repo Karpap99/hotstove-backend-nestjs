@@ -6,11 +6,11 @@ import { Lang } from "./lang.entity";
 @Entity()
 export class TagTranslation extends BaseEntity {
   @ManyToOne(() => Tag, (tag) => tag.translations)
-  tag: Tag;
+  tag!: Tag;
 
   @ManyToOne(() => Lang, (lang) => lang.translations)
-  lang: Lang;
+  lang!: Lang;
 
   @Column()
-  translate: string;
+  translate!: string;
 }

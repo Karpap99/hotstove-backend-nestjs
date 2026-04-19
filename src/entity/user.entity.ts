@@ -2,46 +2,39 @@ import { Entity, Column, OneToMany, OneToOne } from "typeorm";
 import { BaseEntity } from "./base.entity";
 import { Post } from "./post.entity";
 import { Likes } from "./likes.entity";
-import { UserData } from "./userData.entity";
+import { Profile } from "./profile.entity";
 import { Follower } from "./follower.entity";
 import { Message } from "./message.entity";
-import { SubMessage } from "./submessage.entity";
 
 @Entity()
 export class User extends BaseEntity {
-  @Column()
-  email: string;
+  @Column({ unique: true })
+  email!: string;
 
   @Column()
-  password: string;
+  password!: string;
 
   @Column()
-  nickname: string;
+  nickname!: string;
 
   @Column({ default: 0 })
-  followersCount: number;
+  followersCount!: number;
 
-  @OneToOne(() => UserData, (userdata) => userdata.user, { cascade: true })
-  user_data: UserData;
+  @OneToOne(() => Profile, (profile) => profile.user, { cascade: true })
+  profile!: Profile;
 
   @OneToMany(() => Post, (post) => post.creator)
-  posts: Post[];
+  posts!: Post[];
 
   @OneToMany(() => Likes, (like) => like.likeBy)
-  likes: Likes[];
+  likes!: Likes[];
 
   @OneToMany(() => Follower, (f) => f.followed)
-  followers: Follower[];
+  followers!: Follower[];
 
   @OneToMany(() => Follower, (f) => f.follower)
-  following: Follower[];
+  following!: Follower[];
 
   @OneToMany(() => Message, (msg) => msg.user)
-  messages: Message[];
-
-  @OneToMany(() => SubMessage, (msg) => msg.user)
-  subMessages: SubMessage[];
-
-  @OneToMany(() => SubMessage, (sub) => sub.receiver)
-  receivedSubMessages: SubMessage[];
+  messages!: Message[];
 }

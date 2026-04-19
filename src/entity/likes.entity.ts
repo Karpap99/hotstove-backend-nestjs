@@ -1,16 +1,24 @@
-import { Entity, JoinColumn, ManyToOne, Unique } from "typeorm";
+import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from "typeorm";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 import { Post } from "./post.entity";
 
 @Entity()
-@Unique(["post", "likeBy"])
+@Unique(["postId", "likeById"])
 export class Likes extends BaseEntity {
-  @JoinColumn()
-  @ManyToOne(() => Post, (post) => post.likes, { onDelete: "CASCADE" })
-  post: Post;
+  @Index()
+  @Column()
+  postId!: string;
 
-  @JoinColumn()
+  @Index()
+  @Column()
+  likeById!: string;
+
+  @ManyToOne(() => Post, (post) => post.likes, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "postId" })
+  post!: Post;
+
   @ManyToOne(() => User, (user) => user.likes, { onDelete: "CASCADE" })
-  likeBy: User;
+  @JoinColumn({ name: "likeById" })
+  likeBy!: User;
 }

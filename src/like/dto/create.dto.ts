@@ -7,12 +7,12 @@ import { Likes } from "src/entity/likes.entity";
 export class CreateDTO implements Readonly<CreateDTO> {
   @IsUUID()
   @IsOptional()
-  id: string;
+  id!: string;
   @ApiProperty({ required: false, type: () => Post })
-  post: Post;
+  post!: Post;
 
   @ApiProperty({ required: false, type: () => User })
-  likeBy: User;
+  likeBy!: User;
 
   public static from(dto: Partial<CreateDTO>): CreateDTO {
     const it = new CreateDTO();

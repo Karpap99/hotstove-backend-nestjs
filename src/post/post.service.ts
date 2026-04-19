@@ -4,37 +4,19 @@ import {
   Inject,
   Injectable,
   Logger,
-  UnauthorizedException,
+  NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Post } from "src/entity/post.entity";
 import { ILike, In, Repository } from "typeorm";
 import { CreateDTO } from "./dto/create.dto";
-import { UserService } from "src/user/user.service";
 import { LikeService } from "src/like/like.service";
 import { UploaderService } from "src/uploader/uploader.service";
-import { Markingdt } from "./dto/types";
+import { element } from "./dto/types";
 import { Marking } from "src/entity/marking.entity";
 import { TagsService } from "src/tags/tags.service";
 import { FollowerService } from "src/follower/follower.service";
 import { SMALL_AVATAR } from "src/constants";
-
-type element = {
-  component: string;
-  styles: object;
-  key?: string;
-  value: string;
-  children: element[];
-};
-
-export type post_short = {
-  title?: string;
-  description?: string;
-  title_picture?: string;
-  likes?: number;
-  views?: number;
-  date?: string;
-};
 
 @Injectable()
 export class PostService {
@@ -44,7 +26,6 @@ export class PostService {
   constructor(
     @InjectRepository(Post) private readonly repo: Repository<Post>,
     @InjectRepository(Marking) private readonly mark: Repository<Marking>,
-    @Inject(forwardRef(() => UserService)) private users: UserService,
     @Inject(forwardRef(() => LikeService)) private like: LikeService,
     @Inject(forwardRef(() => UploaderService)) private upld: UploaderService,
     @Inject(forwardRef(() => TagsService)) private tagsSrvc: TagsService,
@@ -52,82 +33,64 @@ export class PostService {
     private follower: FollowerService,
   ) {}
 
-  async FormatPublications(publications: Post[], uuid: string) {
-    const formated = await Promise.all(
-      publications.map(async (publication) => {
-        const like = await this.like.getPostLikeByIds(uuid, publication.id);
-        await this.repo.increment({ id: publication.id }, "views", 1);
-        return {
-          ...publication,
-          creator: {
-            id: publication.creator.id,
-            nickname: publication.creator.nickname,
-            profile_picture: SMALL_AVATAR.replace(
-              "default",
-              publication.creator.user_data.profile_picture,
-            ),
-          },
-          likes: like,
-          tags: publication.tags.map((tag) => {
-            return {
-              id: tag.tag.id,
-              content: tag.tag.content,
-            };
-          }),
-        };
-      }),
-    );
-    return formated;
-  }
+  POST_BASE_RELATIONS = ["creator", "creator.profile", "tags", "tags.tag"];
 
-  async FormatPublication(publication: Post, uuid: string) {
-    const like = await this.like.getPostLikeByIds(uuid, publication.id);
-    const formated_publication = {
+  Formater(publication: Post, isLiked: boolean) {
+    return {
       ...publication,
-      likes: like,
+      creator: {
+        id: publication.creator.id,
+        nickname: publication.creator.nickname,
+        profile_picture: SMALL_AVATAR.replace(
+          "default",
+          publication.creator.profile.profile_picture,
+        ),
+      },
+      liked: isLiked,
       tags: publication.tags.map((tag) => {
         return {
           id: tag.tag.id,
           content: tag.tag.content,
         };
       }),
-      creator: {
-        id: publication.creator.id,
-        nickname: publication.creator.nickname,
-        profile_picture: SMALL_AVATAR.replace(
-          "default",
-          publication.creator.user_data.profile_picture,
-        ),
-      },
     };
-    return formated_publication;
+  }
+
+  async FormatPublication(publication: Post, uuid: string) {
+    const likes = await this.like.getPostsLikesByIds(uuid, [publication.id]);
+
+    const likedSet = new Set(likes.map((l) => l.post.id));
+
+    const formated = this.Formater(publication, likedSet.has(publication.id));
+
+    return formated;
+  }
+
+  async FormatPublications(publications: Post[], uuid: string) {
+    const Ids = publications.map((p) => p.id);
+
+    const likes = await this.like.getPostsLikesByIds(uuid, Ids);
+
+    const likedSet = new Set(likes.map((l) => l.post.id));
+
+    const formated = publications.map((publication) => {
+      return this.Formater(publication, likedSet.has(publication.id));
+    });
+    return formated;
   }
 
   async getLikedPosts(uuid: string) {
-    const [postIds, likes] = await this.like.GetLikedPosts(uuid);
+    const liked = await this.like.GetLikedPosts(uuid);
 
-    if (!postIds || postIds.length === 0)
-      throw new BadRequestException("No liked posts found");
+    if (liked.length === 0) return { data: [] };
 
     const publications = await this.repo.find({
-      where: { id: In(postIds) },
-      relations: ["creator", "creator.user_data", "tags", "tags.tag"],
+      where: { id: In([...liked.map((l) => l.postId)]) },
+      relations: this.POST_BASE_RELATIONS,
     });
-    const image_scheme = `${process.env.MINIO_ENDPOINT + "/" + process.env.MINIO_BUCKET_NAME}/profile_pictures/32x32_`;
+
     const formatedPublications = publications.map((publication) => {
-      return {
-        ...publication,
-        likes: likes.filter((like) => like.post.id === publication.id),
-        tags: publication.tags.map((tag) => ({
-          id: tag.tag.id,
-          content: tag.tag.content,
-        })),
-        creator: {
-          id: publication.creator.id,
-          nickname: publication.creator.nickname,
-          profile_picture: `${image_scheme + publication.creator.user_data.profile_picture}.jpeg`,
-        },
-      };
+      return this.Formater(publication, true);
     });
     return { data: formatedPublications };
   }
@@ -135,24 +98,18 @@ export class PostService {
   public async getPostsById(userId: string, postId: string) {
     const publication = await this.repo.findOne({
       where: { id: postId },
-      relations: ["creator", "creator.user_data", "tags", "tags.tag"],
+      relations: this.POST_BASE_RELATIONS,
     });
-    if (!publication) throw new BadRequestException();
+    if (!publication) throw new NotFoundException();
     return await this.FormatPublication(publication, userId);
   }
 
   public async getPostsByIdWithMarking(userId: string, postId: string) {
     const publication = await this.repo.findOne({
       where: { id: postId },
-      relations: [
-        "creator",
-        "creator.user_data",
-        "tags",
-        "tags.tag",
-        "marking",
-      ],
+      relations: [...this.POST_BASE_RELATIONS, "marking"],
     });
-    if (!publication) throw new BadRequestException();
+    if (!publication) throw new NotFoundException();
     return await this.FormatPublication(publication, userId);
   }
 
@@ -161,19 +118,12 @@ export class PostService {
     const followed = await this.follower.FollowedByUser(uuid);
     const followedIds = followed.map((f) => f.id);
     const [publications, total] = await this.repo.findAndCount({
-      where: { creator: In(followedIds) },
-      relations: [
-        "creator",
-        "creator.user_data",
-        "tags",
-        "tags.tag",
-        "likes",
-        "likes.likeBy",
-      ],
+      where: { creatorId: In(followedIds) },
+      relations: this.POST_BASE_RELATIONS,
       skip,
       take: limit,
       order: {
-        createDateTime: "DESC",
+        createdAt: "DESC",
       },
     });
 
@@ -195,19 +145,12 @@ export class PostService {
   ) {
     const skip = (page - 1) * limit;
     const [publications, total] = await this.repo.findAndCount({
-      where: { creator: { id: userId } },
-      relations: [
-        "creator",
-        "creator.user_data",
-        "tags",
-        "tags.tag",
-        "likes",
-        "likes.likeBy",
-      ],
+      where: { creatorId: userId },
+      relations: this.POST_BASE_RELATIONS,
       skip,
       take: limit,
       order: {
-        createDateTime: "DESC",
+        createdAt: "DESC",
       },
     });
 
@@ -231,18 +174,11 @@ export class PostService {
     const skip = (page - 1) * limit;
     const [publications, total] = await this.repo.findAndCount({
       where: { title: ILike(`%${query}%`) },
-      relations: [
-        "creator",
-        "creator.user_data",
-        "tags",
-        "tags.tag",
-        "likes",
-        "likes.likeBy",
-      ],
+      relations: this.POST_BASE_RELATIONS,
       skip,
       take: limit,
       order: {
-        createDateTime: "DESC",
+        createdAt: "DESC",
       },
     });
 
@@ -267,13 +203,11 @@ export class PostService {
       take: limit,
     });
 
-    const formated = await Promise.all(
-      publications.map((publication) => {
-        return {
-          title: publication.title,
-        };
-      }),
-    );
+    const formated = publications.map((publication) => {
+      return {
+        title: publication.title,
+      };
+    });
 
     return {
       data: formated,
@@ -287,43 +221,15 @@ export class PostService {
   public async Test(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
     const [publications, total] = await this.repo.findAndCount({
-      relations: [
-        "creator",
-        "creator.user_data",
-        "tags",
-        "tags.tag",
-        "likes",
-        "likes.likeBy",
-      ],
+      relations: this.POST_BASE_RELATIONS,
       skip,
       take: limit,
       order: {
-        createDateTime: "DESC",
+        createdAt: "DESC",
       },
     });
 
-    const formated = await Promise.all(
-      publications.map(async (publication) => {
-        await this.repo.increment({ id: publication.id }, "views", 1);
-        return {
-          ...publication,
-          creator: {
-            id: publication.creator.id,
-            nickname: publication.creator.nickname,
-            profile_picture: SMALL_AVATAR.replace(
-              "default",
-              publication.creator.user_data.profile_picture,
-            ),
-          },
-          tags: publication.tags.map((tag) => {
-            return {
-              id: tag.tag.id,
-              content: tag.tag.content,
-            };
-          }),
-        };
-      }),
-    );
+    const formated = await this.FormatPublications(publications, "");
 
     return {
       data: formated,
@@ -348,9 +254,9 @@ export class PostService {
     files: Express.Multer.File[],
     tags: string,
   ) {
-    let marking: Markingdt;
+    let marking: element;
     try {
-      marking = JSON.parse(dto.marking) as Markingdt;
+      marking = JSON.parse(dto.marking) as element;
     } catch (e) {
       Logger.log(e);
       throw new BadRequestException("Invalid marking JSON");
@@ -380,11 +286,11 @@ export class PostService {
 
     const publication = await this.repo.save({
       ...CreateDTO.WithoutMarking(dto),
-      creator: { id: userId },
+      creatorId: userId,
     });
 
     const mrk = await this.mark.save({
-      post: publication,
+      postId: publication.id,
       marking,
     });
 
@@ -395,12 +301,15 @@ export class PostService {
     return { publication, mrk };
   }
 
-  public async DeletePost(uuid: string, postId: string) {
+  public async Delete(uuid: string, postId: string) {
     const result = await this.repo.delete({
       id: postId,
       creator: { id: uuid },
     });
-    if (result.affected === 0) throw new BadRequestException();
+    if (result.affected === 0)
+      return {
+        status: "No publication from user found",
+      };
     return { status: "success" };
   }
 

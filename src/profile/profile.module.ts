@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { UserData } from "src/entity/userData.entity";
-import { UserDataService } from "./userData.service";
-import { UserDataController } from "./userData.controller";
+import { Profile } from "../entity/profile.entity";
+import { ProfileService } from "./profile.service";
+import { ProfileController } from "./profile.controller";
 import { UploaderModule } from "src/uploader/uploader.module";
 import { PostModule } from "src/post/post.module";
 import { FollowerModule } from "src/follower/follower.module";
@@ -13,10 +13,10 @@ import { User } from "src/entity/user.entity";
     UploaderModule,
     PostModule,
     FollowerModule,
-    TypeOrmModule.forFeature([UserData, User]),
+    TypeOrmModule.forFeature([Profile, User]),
   ],
-  providers: [UserDataService],
-  controllers: [UserDataController],
-  exports: [UserDataService],
+  providers: [ProfileService],
+  controllers: [ProfileController],
+  exports: [ProfileService],
 })
-export class UserDataModule {}
+export class ProfileModule {}

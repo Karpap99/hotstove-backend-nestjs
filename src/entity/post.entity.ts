@@ -2,9 +2,10 @@ import {
   Entity,
   Column,
   OneToOne,
-  JoinColumn,
   ManyToOne,
   OneToMany,
+  Index,
+  JoinColumn,
 } from "typeorm";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -15,41 +16,46 @@ import { Marking } from "./marking.entity";
 
 @Entity()
 export class Post extends BaseEntity {
+  @Index()
   @Column()
-  title: string;
+  title!: string;
 
   @Column()
-  description: string;
+  description!: string;
 
   @Column({ default: "" })
-  title_picture: string;
+  title_picture!: string;
 
-  @JoinColumn()
-  @ManyToOne(() => User, (user) => user.id)
-  creator: User;
+  @Index()
+  @Column()
+  creatorId!: string;
+
+  @ManyToOne(() => User, (user) => user.posts)
+  @JoinColumn({ name: "creatorId" })
+  creator!: User;
+
+  @Column({ default: 0 })
+  views!: number;
+
+  @Column({ default: 0 })
+  likeCount!: number;
+
+  @Column({ default: 0 })
+  messagesCount!: number;
 
   @OneToMany(() => PostTag, (tags) => tags.post, { cascade: true, eager: true })
-  tags: PostTag[];
-
-  @Column({ default: 0 })
-  views: number;
-
-  @Column({ default: 0 })
-  likeCount: number;
-
-  @Column({ default: 0 })
-  messagesCount: number;
+  tags!: PostTag[];
 
   @OneToMany(() => Likes, (likes) => likes.post)
-  likes: Likes[];
+  likes!: Likes[];
 
   @OneToMany(() => Message, (msg) => msg.post)
-  messages: Message[];
+  messages!: Message[];
 
   @OneToOne(() => Marking, (mrk) => mrk.post, {
     cascade: true,
     eager: true,
     nullable: true,
   })
-  marking: Marking;
+  marking!: Marking;
 }

@@ -4,11 +4,11 @@ import { IsEmail, IsString, IsStrongPassword } from "class-validator";
 export class SignUpDto {
   @ApiProperty()
   @IsEmail()
-  public email: string;
+  public email!: string;
 
   @ApiProperty()
   @IsString()
-  public nickname: string;
+  public nickname!: string;
 
   @ApiProperty()
   @IsStrongPassword({
@@ -18,9 +18,9 @@ export class SignUpDto {
     minUppercase: 1,
     minLowercase: 1,
   })
-  public password: string;
+  public password!: string;
 
   @ApiProperty()
   @IsString()
-  public password2: string;
+  public passwordConfirm!: string;
 }

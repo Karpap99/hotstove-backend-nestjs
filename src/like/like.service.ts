@@ -3,7 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Likes } from "src/entity/likes.entity";
 import { Post } from "src/entity/post.entity";
 import { User } from "src/entity/user.entity";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 
 @Injectable()
 export class LikeService {
@@ -18,6 +18,13 @@ export class LikeService {
     return result;
   }
 
+  public async getPostsLikesByIds(userId: string, ids: string[]) {
+    return await this.repo.findBy({
+      post: In(ids),
+      likeBy: { id: userId },
+    });
+  }
+
   public async getPostLikeByIds(userId: string, postId: string) {
     return await this.repo.findOneBy({
       post: { id: postId },
@@ -25,13 +32,13 @@ export class LikeService {
     });
   }
 
-  public async GetLikedPosts(userId: string): Promise<[string[], Likes[]]> {
-    const res = await this.repo.find({
+  public async GetLikedPosts(userId: string) {
+    return await this.repo.find({
       where: { likeBy: { id: userId } },
-      relations: ["post"],
+      select: {
+        postId: true,
+      },
     });
-    const ids = res.map((val) => val.post.id);
-    return [ids, res];
   }
 
   public async setLike(userId: string, postId: string) {

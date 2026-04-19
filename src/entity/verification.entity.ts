@@ -1,16 +1,17 @@
-import { Entity, Column, JoinColumn, OneToOne } from "typeorm";
+import { Entity, Column, JoinColumn, OneToOne, Index } from "typeorm";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 
 @Entity()
 export class Verification extends BaseEntity {
-  @Column()
-  email: string;
-
   @JoinColumn()
   @OneToOne(() => User, (user) => user.id)
-  user: User;
+  @Index()
+  user!: User;
 
   @Column()
-  verified: boolean;
+  verificationCode!: string;
+
+  @Column()
+  verified!: boolean;
 }

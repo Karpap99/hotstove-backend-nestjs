@@ -1,17 +1,21 @@
-import { Entity, Column, OneToOne, JoinColumn } from "typeorm";
+import { Entity, Column, OneToOne, JoinColumn, Index } from "typeorm";
 import { BaseEntity } from "./base.entity";
 import { Post } from "./post.entity";
-import { Markingdt } from "src/post/dto/types";
+import { element } from "src/post/dto/types";
 
 @Entity()
 export class Marking extends BaseEntity {
-  @JoinColumn()
+  @Index()
+  @Column()
+  postId!: string;
+
+  @JoinColumn({ name: "postId" })
   @OneToOne(() => Post, (post) => post.marking, {
     onDelete: "CASCADE",
     nullable: false,
   })
-  post: Post;
+  post!: Post;
 
   @Column({ type: "json" })
-  marking: Markingdt;
+  marking!: element;
 }

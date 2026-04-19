@@ -1,45 +1,52 @@
-import { Controller, Get, Post, UseGuards, Body, Req } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import {
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  Body,
+  UnauthorizedException,
+  Req,
+} from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { SignUpDto } from "./dto/sign-up.dto";
 import { LoginDto } from "./dto/login.dto";
+import { AuthGuard } from "@nestjs/passport";
+import { Request } from "express";
 
 @Controller("auth")
 export class AuthController {
-  constructor(private serv: AuthService) {}
+  constructor(private service: AuthService) {}
 
-  @Post("sign-up")
-  public async signUp(@Body() user: SignUpDto) {
-    return await this.serv.signUp(user);
+  @Post("register")
+  public async register(@Body() user: SignUpDto) {
+    return await this.service.register(user);
   }
 
   @Post("login")
-  public async login(@Req() req: Request, @Body() user: LoginDto) {
-    return await this.serv.login(user);
+  public async login(@Body() user: LoginDto) {
+    return await this.service.login(user);
   }
 
   @UseGuards(AuthGuard("jwt"))
   @Get("/refresh_token")
   public getToken(@Req() req: Request) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const token = req.headers["authorization"].replace("Bearer ", "");
-    return this.serv.getToken(token);
+    return this.service.getToken(req.user);
   }
 
-  @UseGuards(AuthGuard("local"))
   @Post("logout")
   public logout() {
     return "";
   }
 
   @Get("reauth")
-  public async reauth(@Req() req: Request) {
-    return await this.serv.reAuth(req.headers["cookie"]);
+  public async refreshAuth(@Req() req: Request) {
+    const refresh = req.headers.cookie;
+    if (!refresh) throw new UnauthorizedException();
+    return await this.service.refreshAuth(refresh);
   }
 
   @Get("verify")
-  public async verify() {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return await this.serv.verifyToken("", "access");
+  public verify() {
+    return this.service.verifyToken("", "access");
   }
 }

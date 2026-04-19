@@ -16,8 +16,8 @@ export class TagsService {
     const ids = Tags.map((t) => t.id);
     const existingTags = await this.repo.findBy({ id: In(ids) });
     const payloads = existingTags.map((tag) => ({
-      post: { id: postId },
-      tag: { id: tag.id },
+      postId: postId,
+      tagId: tag.id,
     }));
     await this.repo.save(payloads);
     return;

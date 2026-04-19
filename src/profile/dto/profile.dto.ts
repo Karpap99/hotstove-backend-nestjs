@@ -1,35 +1,35 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
 import { User } from "src/entity/user.entity";
-import { UserData } from "src/entity/userData.entity";
+import { Profile } from "../../entity/profile.entity";
 
-export class UserDataDTO implements Readonly<UserDataDTO> {
+export class ProfileDTO implements Readonly<ProfileDTO> {
   @IsUUID()
   @IsOptional()
-  id: string;
+  id!: string;
 
   @ApiProperty({ required: false })
-  user: User;
+  user!: User;
 
   @ApiProperty({ required: true, default: new Date() })
   @IsNumber()
-  age: Date;
+  age!: Date;
 
   @ApiProperty({ required: false, default: "" })
   @IsString()
-  profile_picture: string;
+  profile_picture!: string;
 
   @ApiProperty({ required: false, default: "" })
   @IsString()
-  description: string;
+  description!: string;
 
-  public static from(dto: Partial<UserDataDTO>) {
-    const it = new UserDataDTO();
+  public static from(dto: Partial<ProfileDTO>) {
+    const it = new ProfileDTO();
     const result = Object.assign({}, it, dto);
     return result;
   }
 
-  public static fromEntity(entity: UserData) {
+  public static fromEntity(entity: Profile) {
     return this.from({
       id: entity.id,
       age: entity.age,
@@ -37,10 +37,11 @@ export class UserDataDTO implements Readonly<UserDataDTO> {
   }
 
   public toEntity() {
-    const it = new UserData();
+    const it = new Profile();
     it.id = this.id;
-    it.lastChangedDateTime = new Date();
-    it.createDateTime = new Date();
+    const date = new Date();
+    it.updatedAt = date;
+    it.createdAt = date;
     return it;
   }
 }

@@ -1,15 +1,10 @@
 import {
   BadRequestException,
   Injectable,
-  Logger,
   UnauthorizedException,
   UsePipes,
   ValidationPipe,
 } from "@nestjs/common";
-import { UserDTO } from "src/user/dto/user.dto";
-import { User } from "src/entity/user.entity";
-import { Repository } from "typeorm";
-import { InjectRepository } from "@nestjs/typeorm";
 import { JwtService } from "@nestjs/jwt";
 import { SignUpDto } from "./dto/sign-up.dto";
 import { UserService } from "src/user/user.service";
@@ -17,95 +12,79 @@ import { LoginDto } from "./dto/login.dto";
 import * as bcrypt from "bcrypt";
 import { ConfigService } from "@nestjs/config";
 import { TokenDto } from "./dto/token.dto";
-import { ResponseDTO } from "src/user/dto/response.dto";
-import { token_payload } from "./types";
+import { UserResponse } from "../user/dto/userResponse.dto";
+import { AuthResponse } from "./dto/authResponse.dto";
 
 @UsePipes(new ValidationPipe({ transform: true }))
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User) private readonly users: Repository<User>,
     private jwtService: JwtService,
     private userService: UserService,
     private readonly configService: ConfigService,
   ) {}
 
-  public async signUp(user: SignUpDto) {
-    const error = {
-      message: [""],
-      error: "Bad Request",
-      statusCode: 400,
-    };
-    const old_user = await this.users.findOne({ where: { email: user.email } });
-    if (old_user) {
-      error.message.push("this email taken");
-      throw new BadRequestException(error);
-    }
-    if (!(user.password == user.password2)) return BadRequestException;
-    const new_user = UserDTO.from(user);
+  public async register(signUpDto: SignUpDto) {
+    if (!(signUpDto.password == signUpDto.passwordConfirm))
+      throw new BadRequestException();
 
+    if (await this.userService.existByEmail(signUpDto.email))
+      throw new BadRequestException();
+
+    const user = await this.userService.Create({
+      email: signUpDto.email,
+      nickname: signUpDto.nickname,
+      password: await this.hashString(signUpDto.password),
+    });
+
+    const { access, refresh } = this.getToken({
+      uuid: user.id,
+      email: user.email,
+      nickname: user.nickname,
+    });
+
+    return new AuthResponse(access, refresh, UserResponse.from(user));
+  }
+
+  async login(loginDto: LoginDto) {
+    const user = await this.userService.getUserByEmail(loginDto.email);
+    if (!user) throw new BadRequestException();
+
+    if (!(await bcrypt.compare(loginDto.password, user.password)))
+      throw new BadRequestException();
+
+    const { access, refresh } = this.getToken({
+      uuid: user.id,
+      email: user.email,
+      nickname: user.nickname,
+    });
+
+    return new AuthResponse(access, refresh, UserResponse.from(user));
+  }
+
+  async refreshAuth(refreshToken: string) {
+    const result: TokenDto = await this.verifyToken(refreshToken, "refresh");
+
+    const user = await this.userService.getUserById(result.uuid);
+    if (!user) throw new BadRequestException();
+
+    const { access, refresh } = this.getToken({
+      uuid: user.id,
+      email: user.email,
+      nickname: user.nickname,
+    });
+
+    return new AuthResponse(access, refresh, UserResponse.from(user));
+  }
+
+  async hashString(value: string) {
     const salt = await bcrypt.genSalt();
-    new_user.password = await bcrypt.hash(new_user.password, salt);
-
-    const result = await this.userService.CreateUser(new_user);
-    const { access, refresh } = this.getToken(
-      TokenDto.from(result.id, result.email, result.nickname),
-    );
-    const response = ResponseDTO.from(result);
-    return { access: access, refresh: refresh, result: response };
-  }
-
-  async validateUser(loginDTO: LoginDto): Promise<User> {
-    const error = {
-      message: [""],
-      error: "Bad Request",
-      statusCode: 400,
-    };
-
-    const user = await this.users.findOne({ where: { email: loginDTO.email } });
-    if (!user) {
-      error.message.push("user doesn't exist");
-      throw new BadRequestException(error);
-    }
-    const pass_compare = await bcrypt.compare(loginDTO.password, user.password);
-    if (!pass_compare) {
-      error.message.push("user doesn't exist");
-      throw new BadRequestException(error);
-    }
-    return user;
-  }
-
-  async reAuth(refreshTKN: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const result: token_payload = await this.verifyToken(refreshTKN, "refresh");
-    const error = {
-      message: [""],
-      error: "Bad Request",
-      statusCode: 400,
-    };
-    const user = await this.users.findOne({ where: { id: result.uuid } });
-    if (!user) {
-      error.message.push("user doesn't exist");
-      throw new BadRequestException(error);
-    }
-    const tokenDTO = TokenDto.from(user.id, user.email, user.nickname);
-    const { access, refresh } = this.getToken(tokenDTO);
-    const response = ResponseDTO.from(user);
-    return { access: access, refresh: refresh, result: response };
-  }
-
-  async login(usr: LoginDto) {
-    const user = await this.validateUser(usr);
-    const tokenDTO = TokenDto.from(user.id, user.email, user.nickname);
-    const { access, refresh } = this.getToken(tokenDTO);
-    const response = ResponseDTO.from(user);
-    return { access: access, refresh: refresh, result: response };
+    return await bcrypt.hash(value, salt);
   }
 
   async verifyToken(token: string, type: "access" | "refresh") {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return await this.jwtService.verify(token, {
+      return await this.jwtService.verifyAsync<TokenDto>(token, {
         secret:
           type === "access"
             ? this.configService.get<string>("SECRET_ACCESS")
@@ -113,24 +92,18 @@ export class AuthService {
         ignoreExpiration: false,
         algorithms: ["HS256"],
       });
-    } catch (e) {
-      Logger.log(e);
+    } catch {
       throw new UnauthorizedException();
     }
   }
 
   getToken(user: TokenDto) {
-    const payload = {
-      uuid: user.uuid,
-      email: user.email,
-      nickname: user.nickname,
-    };
-    const access = this.jwtService.sign(payload, {
+    const access = this.jwtService.sign(user, {
       secret: this.configService.get<string>("SECRET_ACCESS"),
       expiresIn: "1h",
       algorithm: "HS256",
     });
-    const refresh = this.jwtService.sign(payload, {
+    const refresh = this.jwtService.sign(user, {
       secret: this.configService.get<string>("SECRET_REFRESH"),
       expiresIn: "60d",
       algorithm: "HS256",

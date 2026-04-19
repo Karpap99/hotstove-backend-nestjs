@@ -18,12 +18,12 @@ export class LikeController {
   @UseGuards(AuthGuard("jwt"))
   @Post("")
   async setLike(@Req() req: Request, @Body("postId") postId: string) {
-    return await this.service.setLike(req.user!.uuid, postId);
+    return await this.service.setLike(req.user?.uuid, postId);
   }
 
   @UseGuards(AuthGuard("jwt"))
   @Delete("")
   async deleteLike(@Req() req: Request, @Query("postId") postId: string) {
-    return await this.service.deleteLike(req.user!.uuid, postId);
+    return await this.service.deleteLike(req.user?.uuid, postId);
   }
 }

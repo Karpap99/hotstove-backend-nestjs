@@ -1,8 +1,6 @@
 import { forwardRef, Module } from "@nestjs/common";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { User } from "src/entity/user.entity";
 import { PassportModule } from "@nestjs/passport";
 import { LocalStrategy } from "./local.strategy";
 import { JwtModule, JwtService } from "@nestjs/jwt";
@@ -16,7 +14,7 @@ import { UserModule } from "src/user/user.module";
     PassportModule,
     forwardRef(() => UserModule),
     JwtModule.registerAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule, UserModule],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>("SECRET_ACCESS"),
         secretOrPrivateKey: config.get<string>("SECRET_ACCESS"),
@@ -26,7 +24,7 @@ import { UserModule } from "src/user/user.module";
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User]),
+    UserModule,
   ],
   controllers: [AuthController],
   providers: [
