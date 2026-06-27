@@ -15,9 +15,15 @@ import { MessageModule } from "./message/message.module";
 import { TagModule } from "./tag/tag.module";
 import { MessageLikeModule } from "./message-like/message-like.module";
 import { configService } from "./config/config.service";
+import { AiService } from "./ai/ai.service";
+import { TestModule } from "./test/test.module";
+import { ConfigModule } from "@nestjs/config";
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
     AuthModule,
     UserModule,
@@ -33,8 +39,9 @@ import { configService } from "./config/config.service";
     ProfileModule,
     TagModule,
     MessageLikeModule,
+    TestModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [AiService],
 })
 export class AppModule {}

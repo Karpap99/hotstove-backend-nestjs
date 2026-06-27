@@ -42,8 +42,34 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-    command: server /data --console-address ":9001" &
+    command: server /data --console-address ":9001" 
     ports:
       - "9000:9000"
       - "9001:9001"
+    volumes:
+      - ./minio_data:/data
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11435:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  ollama-init:
+    image: ollama/ollama
+    depends_on:
+      - ollama
+    entrypoint: >
+      sh -c "
+        sleep 10 &&
+        ollama pull gemma4:e2b
+      "
+    environment:
+      OLLAMA_HOST: http://ollama:11434
     

@@ -12,7 +12,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import sharp from "sharp";
+import sharp = require("sharp");
 
 @Injectable()
 export class UploaderService {
