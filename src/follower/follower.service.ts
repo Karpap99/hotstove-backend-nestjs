@@ -61,7 +61,7 @@ export class FollowerService {
       return {
         id: follow.followed.id,
         nickname: follow.followed.nickname,
-        profile_picture: SMALL_AVATAR.replace(
+        profile_picture: SMALL_AVATAR().replace(
           "default",
           follow.followed.profile.profile_picture,
         ),

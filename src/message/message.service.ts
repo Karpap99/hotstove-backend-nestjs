@@ -35,7 +35,7 @@ export class MessageService {
       user: {
         id: newMsg.user.id,
         nickname: newMsg.user.nickname,
-        profile_picture: SMALL_AVATAR.replace(
+        profile_picture: SMALL_AVATAR().replace(
           "default",
           newMsg.user.profile.profile_picture,
         ),
@@ -64,7 +64,7 @@ export class MessageService {
         user: {
           id: message.user.id,
           nickname: message.user.nickname,
-          profile_picture: SMALL_AVATAR.replace(
+          profile_picture: SMALL_AVATAR().replace(
             "default",
             message.user.profile.profile_picture,
           ),

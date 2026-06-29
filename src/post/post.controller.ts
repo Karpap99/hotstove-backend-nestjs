@@ -16,6 +16,7 @@ import { PostService } from "./post.service";
 import { AuthGuard } from "@nestjs/passport";
 import { CreateDTO } from "./dto/create.dto";
 import { FilesInterceptor } from "@nestjs/platform-express";
+
 @Controller("post")
 export class PostController {
   constructor(private serv: PostService) {}

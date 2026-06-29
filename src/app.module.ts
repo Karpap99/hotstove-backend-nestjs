@@ -18,6 +18,9 @@ import { configService } from "./config/config.service";
 import { AiService } from "./ai/ai.service";
 import { TestModule } from "./test/test.module";
 import { ConfigModule } from "@nestjs/config";
+import { CacheModule } from "@nestjs/cache-manager";
+import KeyvRedis, { Keyv } from "@keyv/redis";
+import { KeyvCacheableMemory } from "node_modules/cacheable/dist/index.cjs";
 
 @Module({
   imports: [
@@ -40,6 +43,19 @@ import { ConfigModule } from "@nestjs/config";
     TagModule,
     MessageLikeModule,
     TestModule,
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: () => {
+        return {
+          stores: [
+            new Keyv({
+              store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }),
+            }),
+            new KeyvRedis(process.env.REDIS_URL),
+          ],
+        };
+      },
+    }),
   ],
   controllers: [],
   providers: [AiService],

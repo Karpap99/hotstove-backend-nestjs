@@ -26,7 +26,7 @@ export class ProfileService {
       where: { userId: uuid },
     });
     if (!profile) throw new BadRequestException("No user");
-    profile.profile_picture = BIG_AVATAR.replace(
+    profile.profile_picture = BIG_AVATAR().replace(
       "default",
       profile.profile_picture,
     );
@@ -65,7 +65,7 @@ export class ProfileService {
     profile.description = update.description;
 
     const result = await this.profiles.save(profile);
-    result.profile_picture = BIG_AVATAR.replace(
+    result.profile_picture = BIG_AVATAR().replace(
       "default",
       result.profile_picture,
     );

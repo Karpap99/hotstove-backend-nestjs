@@ -50,7 +50,7 @@ export class UserService {
         `User with id ${requestedUser} doen't exist`,
       );
     }
-    user.profile.profile_picture = BIG_AVATAR.replace(
+    user.profile.profile_picture = BIG_AVATAR().replace(
       "default",
       user.profile.profile_picture,
     );
@@ -70,7 +70,7 @@ export class UserService {
     const response = {
       ...user,
       ...user.profile,
-      profile_picture: BIG_AVATAR.replace(
+      profile_picture: BIG_AVATAR().replace(
         "default",
         user.profile.profile_picture,
       ),

@@ -17,6 +17,9 @@ import { Marking } from "src/entity/marking.entity";
 import { TagsService } from "src/tags/tags.service";
 import { FollowerService } from "src/follower/follower.service";
 import { SMALL_AVATAR } from "src/constants";
+import { CACHE_MANAGER, Cache } from "@nestjs/cache-manager";
+import { Likes } from "src/entity/likes.entity";
+import { Message } from "src/entity/message.entity";
 
 @Injectable()
 export class PostService {
@@ -24,6 +27,7 @@ export class PostService {
     throw new Error("Method not implemented.");
   }
   constructor(
+    @Inject(CACHE_MANAGER) private cache: Cache,
     @InjectRepository(Post) private readonly repo: Repository<Post>,
     @InjectRepository(Marking) private readonly mark: Repository<Marking>,
     @Inject(forwardRef(() => LikeService)) private like: LikeService,
@@ -41,7 +45,7 @@ export class PostService {
       creator: {
         id: publication.creator.id,
         nickname: publication.creator.nickname,
-        profile_picture: SMALL_AVATAR.replace(
+        profile_picture: SMALL_AVATAR().replace(
           "default",
           publication.creator.profile.profile_picture,
         ),
@@ -171,25 +175,85 @@ export class PostService {
     limit: number = 10,
     query: string,
   ) {
-    const skip = (page - 1) * limit;
-    const [publications, total] = await this.repo.findAndCount({
-      where: { title: ILike(`%${query}%`) },
-      relations: this.POST_BASE_RELATIONS,
-      skip,
-      take: limit,
-      order: {
-        createdAt: "DESC",
-      },
-    });
+    const cache_key_user = `user:${uuid}:posts:${page}:${query}`;
 
-    const formated = await this.FormatPublications(publications, uuid);
+    const cached_for_user = await this.cache.get<{
+      formated: {
+        creator: {
+          id: string;
+          nickname: string;
+          profile_picture: string;
+        };
+        liked: boolean;
+        tags: {
+          id: string;
+          content: string;
+        }[];
+        title: string;
+        description: string;
+        title_picture: string;
+        creatorId: string;
+        views: number;
+        likeCount: number;
+        messagesCount: number;
+        likes: Likes[];
+        messages: Message[];
+        marking: Marking;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+      }[];
+      total: number;
+    }>(cache_key_user);
+
+    if (cached_for_user && cached_for_user.formated.length > 0) {
+      return {
+        data: cached_for_user.formated,
+        page,
+        limit,
+        total: cached_for_user.total,
+        totalPages: Math.ceil(cached_for_user.total / limit),
+      };
+    }
+
+    const cache_key = `posts:${page}:${query}`;
+
+    let cached = await this.cache.get<{ publications: Post[]; total: number }>(
+      cache_key,
+    );
+
+    if (!cached || cached.publications.length === 0) {
+      const skip = (page - 1) * limit;
+
+      const [publications, total] = await this.repo.findAndCount({
+        where: { title: ILike(`%${query}%`) },
+        relations: this.POST_BASE_RELATIONS,
+        skip,
+        take: limit,
+        order: {
+          createdAt: "DESC",
+        },
+      });
+
+      await this.cache.set(cache_key, { publications, total }, 60_000);
+
+      cached = { publications, total };
+    }
+
+    const formated = await this.FormatPublications(cached.publications, uuid);
+
+    await this.cache.set(
+      cache_key_user,
+      { formated, total: cached.total },
+      30_000,
+    );
 
     return {
       data: formated,
       page,
       limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+      total: cached.total,
+      totalPages: Math.ceil(cached.total / limit),
     };
   }
 
